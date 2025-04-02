@@ -1,0 +1,18 @@
+services:
+  react-app-dev:
+    build:
+      context: .
+      args:
+        ENV: dev
+    image: mydockerhubusername/myapp:dev
+    ports:
+      - "8083:80"
+
+  react-app-prod:
+    build:
+      context: .
+      args:
+        ENV: prod
+    image: mydockerhubusername/myapp:prod
+    ports:
+      - "8083:80"
