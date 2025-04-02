@@ -16,7 +16,7 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    sh 'docker build -t abisheak469/dev:$BUILD_NUMBER ./build'
+                    sh 'docker build -t abisheak469/dev:$BUILD_NUMBER .'
                 }
             }
         }
