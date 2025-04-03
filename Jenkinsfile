@@ -37,7 +37,9 @@ pipeline {
                     sh '''
                     docker-compose down
                     docker-compose up -d
+                    docker ps
                     '''
+                    // Checking the webhook trigger
                 }
             }
         }
