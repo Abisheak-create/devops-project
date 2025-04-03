@@ -39,7 +39,7 @@ pipeline {
                     docker-compose up -d
                     docker ps
                     '''
-                    // Checking the webhook trigger
+                    // Checking the webhook trigger again
                 }
             }
         }
