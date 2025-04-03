@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    environment {
+        IMAGE_NAME = "abisheak469/dev"
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -13,24 +16,28 @@ pipeline {
                 }
             }
         }
-        stage('Docker Build') {
+        stage('Docker Compose Build') {
             steps {
                 script {
-                    sh 'docker build -t abisheak469/dev:$BUILD_NUMBER .'
+                    sh 'docker-compose build'
+                    sh "docker tag react_dev $IMAGE_NAME:$BUILD_NUMBER"
                 }
             }
         }
         stage('Docker Push') {
             steps {
                 script {
-                    sh 'docker push abisheak469/dev:$BUILD_NUMBER'
+                    sh "docker push $IMAGE_NAME:$BUILD_NUMBER"
                 }
             }
         }
-        stage('Container run') {
+        stage('Deploy with Docker Compose') {
             steps {
                 script {
-                    sh 'docker run -d -p 80:80 abisheak469/dev:$BUILD_NUMBER'
+                    sh '''
+                    docker-compose down
+                    docker-compose up -d
+                    '''
                 }
             }
         }
