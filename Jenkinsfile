@@ -35,7 +35,9 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker-compose down
+                    docker-compose down || true  # Ignore error if no containers are running
+                    docker ps -q --filter "publish=80" | xargs -r docker stop  # Stop any container using port 80
+                    docker ps -a -q --filter "publish=80" | xargs -r docker rm  # Remove stopped container
                     docker-compose up -d
                     docker ps
                     '''
