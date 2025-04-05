@@ -4,8 +4,9 @@ pipeline {
     environment {
         DOCKERHUB_DEV = "abisheak469/dev"
         DOCKERHUB_PROD = "abisheak469/prod"
-        PORT = ""
         IMAGE_NAME = ""
+        PORT = ""
+        COMPOSE_FILE = ""
     }
 
     stages {
@@ -27,8 +28,9 @@ pipeline {
                     }
 
                     echo "Branch: ${branch}"
-                    echo "Image: ${env.IMAGE_NAME}:${BUILD_NUMBER}"
-                    echo "Port: ${env.PORT}"
+                    echo "Using image: ${env.IMAGE_NAME}:${BUILD_NUMBER}"
+                    echo "Using port: ${env.PORT}"
+                    echo "Compose file: ${env.COMPOSE_FILE}"
                 }
             }
         }
@@ -47,18 +49,12 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Tag') {
+        stage('Docker Build & Push') {
             steps {
                 script {
-                    sh "docker-compose -f ${COMPOSE_FILE} build"
-                    sh "docker tag react-app ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
+                    sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
                 }
-            }
-        }
-
-        stage('Docker Push') {
-            steps {
-                sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
             }
         }
 
