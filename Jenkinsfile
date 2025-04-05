@@ -1,14 +1,44 @@
 pipeline {
     agent any
+
     environment {
-        IMAGE_NAME = "abisheak469/dev"
+        DOCKERHUB_DEV = "abisheak469/dev"
+        DOCKERHUB_PROD = "abisheak469/prod"
+        PORT = ""
+        IMAGE_NAME = ""
     }
+
     stages {
-        stage('Checkout') {
+        stage('Init') {
             steps {
-                git branch: 'dev', url: 'https://github.com/Abisheak-create/devops-project.git'
+                script {
+                    BRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+
+                    if (BRANCH == "dev") {
+                        IMAGE_NAME = DOCKERHUB_DEV
+                        PORT = "8081"
+                        COMPOSE_FILE = "docker-compose.dev.yml"
+                    } else if (BRANCH == "master") {
+                        IMAGE_NAME = DOCKERHUB_PROD
+                        PORT = "8082"
+                        COMPOSE_FILE = "docker-compose.prod.yml"
+                    } else {
+                        error("Unsupported branch: ${BRANCH}")
+                    }
+
+                    echo "Branch: ${BRANCH}"
+                    echo "Image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    echo "Port: ${PORT}"
+                }
             }
         }
+
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Abisheak-create/devops-project.git', branch: "${env.BRANCH_NAME}"
+            }
+        }
+
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -16,32 +46,32 @@ pipeline {
                 }
             }
         }
-        stage('Docker Compose Build') {
+
+        stage('Docker Build & Tag') {
             steps {
                 script {
-                    sh 'docker-compose build'
-                    sh "docker tag react_dev $IMAGE_NAME:$BUILD_NUMBER"
+                    sh "docker-compose -f ${COMPOSE_FILE} build"
+                    sh "docker tag react-app ${IMAGE_NAME}:${BUILD_NUMBER}"
                 }
             }
         }
+
         stage('Docker Push') {
             steps {
-                script {
-                    sh "docker push $IMAGE_NAME:$BUILD_NUMBER"
-                }
+                sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
             }
         }
-        stage('Deploy with Docker Compose') {
+
+        stage('Deploy') {
             steps {
                 script {
-                    sh '''
-                    docker-compose down || true  # Ignore error if no containers are running
-                    docker ps -q --filter "publish=80" | xargs -r docker stop  # Stop any container using port 80
-                    docker ps -a -q --filter "publish=80" | xargs -r docker rm  # Remove stopped container
-                    docker-compose up -d
+                    sh """
+                    docker-compose -f ${COMPOSE_FILE} down || true
+                    docker ps -q --filter "publish=${PORT}" | xargs -r docker stop
+                    docker ps -a -q --filter "publish=${PORT}" | xargs -r docker rm
+                    docker-compose -f ${COMPOSE_FILE} up -d
                     docker ps
-                    '''
-                    // Checking the webhook trigger
+                    """
                 }
             }
         }

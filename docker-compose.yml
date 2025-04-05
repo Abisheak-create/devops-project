@@ -1,8 +1,0 @@
-services:
-  react-app-dev:
-    build:
-      context: .
-      args:
-        ENV: dev
-    ports:
-      - "80:80"

@@ -1,0 +1,6 @@
+version: '3'
+services:
+  react-app:
+    image: abisheak469/prod:${BUILD_NUMBER}
+    ports:
+      - "8082:80"
