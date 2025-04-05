@@ -12,26 +12,27 @@ pipeline {
         stage('Init') {
             steps {
                 script {
-                    BRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def branch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
 
-                    if (BRANCH == "dev") {
-                        IMAGE_NAME = DOCKERHUB_DEV
-                        PORT = "8081"
-                        COMPOSE_FILE = "docker-compose.dev.yml"
-                    } else if (BRANCH == "master") {
-                        IMAGE_NAME = DOCKERHUB_PROD
-                        PORT = "8082"
-                        COMPOSE_FILE = "docker-compose.prod.yml"
+                    if (branch == "dev") {
+                        env.IMAGE_NAME = env.DOCKERHUB_DEV
+                        env.PORT = "8081"
+                        env.COMPOSE_FILE = "docker-compose.dev.yml"
+                    } else if (branch == "master") {
+                        env.IMAGE_NAME = env.DOCKERHUB_PROD
+                        env.PORT = "8082"
+                        env.COMPOSE_FILE = "docker-compose.prod.yml"
                     } else {
-                        error("Unsupported branch: ${BRANCH}")
+                        error("Unsupported branch: ${branch}")
                     }
 
-                    echo "Branch: ${BRANCH}"
-                    echo "Image: ${IMAGE_NAME}:${BUILD_NUMBER}"
-                    echo "Port: ${PORT}"
+                    echo "Branch: ${branch}"
+                    echo "Image: ${env.IMAGE_NAME}:${BUILD_NUMBER}"
+                    echo "Port: ${env.PORT}"
                 }
             }
-        }
+            }
+
 
         stage('Checkout') {
             steps {
