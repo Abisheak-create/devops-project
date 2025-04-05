@@ -1,30 +1,13 @@
 pipeline {
     agent any
     environment {
-        DOCKER_HUB_USER = "abisheak469"
+        IMAGE_NAME = "abisheak469/dev"
     }
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'dev', url: 'https://github.com/Abisheak-create/devops-project.git'
             }
-        }
-        stage('Set Image Name & Port') {
-                script {
-                    branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    if (branchName == "dev") {
-                        imageName = "${DOCKER_HUB_USER}/dev"
-                        port = "8081"
-                    } else if (branchName == "master") {
-                        imageName = "${DOCKER_HUB_USER}/prod"
-                        port = "8082"
-                    } else {
-                        error("Unsupported branch: ${branchName}")
-                    }
-                    env.IMAGE_NAME = imageName
-                    env.APP_PORT = port
-                    echo "Branch: ${branchName}, Image: ${imageName}, Port: ${port}"
-                }
         }
         stage('Docker Login') {
             steps {
@@ -51,14 +34,14 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 script {
-                    // triggering
-                    sh """
-                    docker-compose down || true
-                    docker ps -q --filter "publish=$APP_PORT" | xargs -r docker stop
-                    docker ps -a -q --filter "publish=$APP_PORT" | xargs -r docker rm
-                    APP_PORT=$APP_PORT docker-compose up -d --build
+                    sh '''
+                    docker-compose down || true  # Ignore error if no containers are running
+                    docker ps -q --filter "publish=80" | xargs -r docker stop  # Stop any container using port 80
+                    docker ps -a -q --filter "publish=80" | xargs -r docker rm  # Remove stopped container
+                    docker-compose up -d
                     docker ps
-                    """
+                    '''
+                    // Checking the webhook trigger
                 }
             }
         }
