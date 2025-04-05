@@ -4,30 +4,31 @@ pipeline {
     environment {
         DOCKERHUB_DEV = "abisheak469/dev"
         DOCKERHUB_PROD = "abisheak469/prod"
-        IMAGE_NAME = ""
-        PORT = ""
-        COMPOSE_FILE = ""
+        BRANCH = "${env.BRANCH_NAME}"
     }
 
     stages {
         stage('Init') {
             steps {
                 script {
-                    def branch = env.BRANCH_NAME
-
-                    if (branch == "dev") {
-                        env.IMAGE_NAME = env.DOCKERHUB_DEV
-                        env.PORT = "8081"
-                        env.COMPOSE_FILE = "docker-compose.dev.yml"
-                    } else if (branch == "master") {
-                        env.IMAGE_NAME = env.DOCKERHUB_PROD
-                        env.PORT = "8082"
-                        env.COMPOSE_FILE = "docker-compose.prod.yml"
+                    if (BRANCH == "dev") {
+                        IMAGE_NAME = "${DOCKERHUB_DEV}"
+                        PORT = "8081"
+                        COMPOSE_FILE = "docker-compose.dev.yml"
+                    } else if (BRANCH == "master") {
+                        IMAGE_NAME = "${DOCKERHUB_PROD}"
+                        PORT = "8082"
+                        COMPOSE_FILE = "docker-compose.prod.yml"
                     } else {
-                        error("Unsupported branch: ${branch}")
+                        error("Unsupported branch: ${BRANCH}")
                     }
 
-                    echo "Branch: ${branch}"
+                    // Export as env vars for later stages
+                    env.IMAGE_NAME = IMAGE_NAME
+                    env.PORT = PORT
+                    env.COMPOSE_FILE = COMPOSE_FILE
+
+                    echo "Branch: ${BRANCH}"
                     echo "Using image: ${env.IMAGE_NAME}:${BUILD_NUMBER}"
                     echo "Using port: ${env.PORT}"
                     echo "Compose file: ${env.COMPOSE_FILE}"
@@ -52,8 +53,8 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
-                    sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    sh "docker build -t ${env.IMAGE_NAME}:${BUILD_NUMBER} ."
+                    sh "docker push ${env.IMAGE_NAME}:${BUILD_NUMBER}"
                 }
             }
         }
@@ -62,10 +63,10 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker-compose -f ${COMPOSE_FILE} down || true
-                    docker ps -q --filter "publish=${PORT}" | xargs -r docker stop
-                    docker ps -a -q --filter "publish=${PORT}" | xargs -r docker rm
-                    docker-compose -f ${COMPOSE_FILE} up -d
+                    docker-compose -f ${env.COMPOSE_FILE} down || true
+                    docker ps -q --filter "publish=${env.PORT}" | xargs -r docker stop
+                    docker ps -a -q --filter "publish=${env.PORT}" | xargs -r docker rm
+                    docker-compose -f ${env.COMPOSE_FILE} up -d
                     docker ps
                     """
                 }
