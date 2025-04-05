@@ -52,6 +52,7 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 script {
+                    // triggering
                     sh """
                     docker-compose down || true
                     docker ps -q --filter "publish=$APP_PORT" | xargs -r docker stop
