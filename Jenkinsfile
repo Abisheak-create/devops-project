@@ -2,50 +2,26 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_DEV = "abisheak469/dev"
-        DOCKERHUB_PROD = "abisheak469/prod"
-        BRANCH = "${env.BRANCH_NAME}"
+        DEV_IMAGE = 'abisheak469/dev'
+        PROD_IMAGE = 'abisheak469/prod'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
-        stage('Init') {
-            steps {
-                script {
-                    if (BRANCH == "dev") {
-                        IMAGE_NAME = "${DOCKERHUB_DEV}"
-                        PORT = "8081"
-                        COMPOSE_FILE = "docker-compose.dev.yml"
-                    } else if (BRANCH == "master") {
-                        IMAGE_NAME = "${DOCKERHUB_PROD}"
-                        PORT = "8082"
-                        COMPOSE_FILE = "docker-compose.prod.yml"
-                    } else {
-                        error("Unsupported branch: ${BRANCH}")
-                    }
-
-                    // Export as env vars for later stages
-                    env.IMAGE_NAME = IMAGE_NAME
-                    env.PORT = PORT
-                    env.COMPOSE_FILE = COMPOSE_FILE
-
-                    echo "Branch: ${BRANCH}"
-                    echo "Using image: ${env.IMAGE_NAME}:${BUILD_NUMBER}"
-                    echo "Using port: ${env.PORT}"
-                    echo "Compose file: ${env.COMPOSE_FILE}"
-                }
-            }
-        }
-
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/Abisheak-create/devops-project.git', branch: "${env.BRANCH_NAME}"
+                script {
+                    def branch = env.GIT_BRANCH?.replaceFirst(/^origin\//, '') ?: 'dev'
+                    echo "Checking out branch: ${branch}"
+                    git branch: "${branch}", url: 'https://github.com/Abisheak-create/devops-project.git'
+                }
             }
         }
 
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"'
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
@@ -53,22 +29,48 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    sh "docker build -t ${env.IMAGE_NAME}:${BUILD_NUMBER} ."
-                    sh "docker push ${env.IMAGE_NAME}:${BUILD_NUMBER}"
+                    def branch = env.BRANCH_NAME
+                    echo "Current Branch: ${branch}"
+
+                    if (branch == 'dev') {
+                        sh "docker build -t ${DEV_IMAGE}:${IMAGE_TAG} ."
+                        sh "docker push ${DEV_IMAGE}:${IMAGE_TAG}"
+                    } else if (branch == 'master') {
+                        sh "docker build -t ${PROD_IMAGE}:${IMAGE_TAG} ."
+                        sh "docker push ${PROD_IMAGE}:${IMAGE_TAG}"
+                    } else {
+                        echo "No Docker push configured for this branch"
+                    }
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Cleanup Existing Containers') {
             steps {
                 script {
-                    sh """
-                    docker-compose -f ${env.COMPOSE_FILE} down || true
-                    docker ps -q --filter "publish=${env.PORT}" | xargs -r docker stop
-                    docker ps -a -q --filter "publish=${env.PORT}" | xargs -r docker rm
-                    docker-compose -f ${env.COMPOSE_FILE} up -d
-                    docker ps
-                    """
+                    def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
+                    if (port) {
+                        sh """
+                            echo "Cleaning up containers running on port ${port}..."
+                            CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
+                            if [ ! -z "\$CONTAINER_ID" ]; then
+                                docker stop \$CONTAINER_ID
+                                docker rm \$CONTAINER_ID
+                            fi
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'dev') {
+                        sh "docker run -d -p 8081:80 ${DEV_IMAGE}:${IMAGE_TAG}"
+                    } else if (env.BRANCH_NAME == 'master') {
+                        sh "docker run -d -p 8082:80 ${PROD_IMAGE}:${IMAGE_TAG}"
+                    }
                 }
             }
         }
