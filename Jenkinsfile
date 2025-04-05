@@ -1,12 +1,30 @@
 pipeline {
     agent any
     environment {
-        IMAGE_NAME = "abisheak469/dev"
+        IMAGE_NAME = ''
+        APP_PORT = ''
     }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'dev', url: 'https://github.com/Abisheak-create/devops-project.git'
+                git url: 'https://github.com/Abisheak-create/devops-project.git'
+            }
+        }
+        stage('Set Image Name & Port') {
+            steps {
+                script {
+                    def branch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    if (branch == 'dev') {
+                        env.IMAGE_NAME = "abisheak469/dev"
+                        env.APP_PORT = "8081"
+                    } else if (branch == 'master') {
+                        env.IMAGE_NAME = "abisheak469/prod"
+                        env.APP_PORT = "8082"
+                    } else {
+                        error("Unsupported branch: ${branch}")
+                    }
+                    echo "Branch: ${branch}, Image: ${env.IMAGE_NAME}, Port: ${env.APP_PORT}"
+                }
             }
         }
         stage('Docker Login') {
@@ -34,14 +52,13 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 script {
-                    sh '''
-                    docker-compose down || true  # Ignore error if no containers are running
-                    docker ps -q --filter "publish=80" | xargs -r docker stop  # Stop any container using port 80
-                    docker ps -a -q --filter "publish=80" | xargs -r docker rm  # Remove stopped container
-                    docker-compose up -d
+                    sh """
+                    docker-compose down || true
+                    docker ps -q --filter "publish=$APP_PORT" | xargs -r docker stop
+                    docker ps -a -q --filter "publish=$APP_PORT" | xargs -r docker rm
+                    APP_PORT=$APP_PORT docker-compose up -d --build
                     docker ps
-                    '''
-                    // Checking the webhook trigger
+                    """
                 }
             }
         }

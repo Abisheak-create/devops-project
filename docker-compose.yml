@@ -1,9 +1,6 @@
-version: '3.8'
 services:
   react-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     image: react_dev
     ports:
-      - "80:80"
+      - "${APP_PORT}:80"
