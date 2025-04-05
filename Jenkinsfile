@@ -12,7 +12,7 @@ pipeline {
         stage('Init') {
             steps {
                 script {
-                    def branch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def branch = env.BRANCH_NAME
 
                     if (branch == "dev") {
                         env.IMAGE_NAME = env.DOCKERHUB_DEV
@@ -31,8 +31,7 @@ pipeline {
                     echo "Port: ${env.PORT}"
                 }
             }
-            }
-
+        }
 
         stage('Checkout') {
             steps {
