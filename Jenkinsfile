@@ -1,31 +1,30 @@
 pipeline {
     agent any
     environment {
-        IMAGE_NAME = ''
-        APP_PORT = ''
+        DOCKER_HUB_USER = "abisheak469"
     }
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/Abisheak-create/devops-project.git'
+                checkout scm
             }
         }
         stage('Set Image Name & Port') {
-            steps {
                 script {
-                    def branch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    if (branch == 'dev') {
-                        env.IMAGE_NAME = "abisheak469/dev"
-                        env.APP_PORT = "8081"
-                    } else if (branch == 'master') {
-                        env.IMAGE_NAME = "abisheak469/prod"
-                        env.APP_PORT = "8082"
+                    branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    if (branchName == "dev") {
+                        imageName = "${DOCKER_HUB_USER}/dev"
+                        port = "8081"
+                    } else if (branchName == "master") {
+                        imageName = "${DOCKER_HUB_USER}/prod"
+                        port = "8082"
                     } else {
-                        error("Unsupported branch: ${branch}")
+                        error("Unsupported branch: ${branchName}")
                     }
-                    echo "Branch: ${branch}, Image: ${env.IMAGE_NAME}, Port: ${env.APP_PORT}"
+                    env.IMAGE_NAME = imageName
+                    env.APP_PORT = port
+                    echo "Branch: ${branchName}, Image: ${imageName}, Port: ${port}"
                 }
-            }
         }
         stage('Docker Login') {
             steps {
