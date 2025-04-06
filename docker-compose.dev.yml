@@ -1,5 +1,4 @@
 version: '3'
-
 services:
   react-app:
     image: abisheak469/dev:${BUILD_NUMBER}
@@ -14,8 +13,6 @@ services:
     image: prom/prometheus:latest
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
     ports:
       - "9090:9090"
     networks:
@@ -27,12 +24,7 @@ services:
       - "3000:3000"
     networks:
       - monitoring
-    volumes:
-      - grafana-storage:/var/lib/grafana
 
 networks:
   monitoring:
     driver: bridge
-
-volumes:
-  grafana-storage:
