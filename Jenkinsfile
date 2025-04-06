@@ -31,6 +31,7 @@ pipeline {
                 script {
                     def branch = env.BRANCH_NAME
                     echo "Current Branch: ${branch}"
+                    // trigger testing
 
                     if (branch == 'dev') {
                         sh "docker build -t ${DEV_IMAGE}:${IMAGE_TAG} ."
