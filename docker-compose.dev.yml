@@ -6,3 +6,4 @@ services:
       context: .
     ports:
       - "8081:80"
+    network_mode: "host"  # 👈 Add this line
