@@ -6,3 +6,12 @@ services:
       context: .
     ports:
       - "8081:80"
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    ports:
+      - "9113:9113"
+    command:
+      - "-nginx.scrape-uri=http://react-app/stub_status"
+    depends_on:
+      - react-app
