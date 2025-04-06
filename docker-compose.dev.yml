@@ -1,4 +1,5 @@
 version: '3'
+
 services:
   react-app:
     image: abisheak469/dev:${BUILD_NUMBER}
@@ -6,3 +7,9 @@ services:
       context: .
     ports:
       - "8081:80"
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    external: true

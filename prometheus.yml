@@ -2,9 +2,9 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
-  - job_name: 'react_app'
+  - job_name: 'react-app'
     static_configs:
-      - targets: ['react_app:80']
+      - targets: ['react-app:80']
 
   - job_name: 'jenkins'
     metrics_path: /prometheus
