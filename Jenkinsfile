@@ -26,21 +26,20 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Compose Build & Push') {
             steps {
                 script {
-                    def branch = env.BRANCH_NAME
-                    echo "Current Branch: ${branch}"
-                    // trigger testing
+                    def composeFile = env.BRANCH_NAME == 'dev' ? 'docker-compose.dev.yml' :
+                                      env.BRANCH_NAME == 'master' ? 'docker-compose.prod.yml' : null
+                    def image = env.BRANCH_NAME == 'dev' ? env.DEV_IMAGE :
+                                env.BRANCH_NAME == 'master' ? env.PROD_IMAGE : null
 
-                    if (branch == 'dev') {
-                        sh "docker build -t ${DEV_IMAGE}:${IMAGE_TAG} ."
-                        sh "docker push ${DEV_IMAGE}:${IMAGE_TAG}"
-                    } else if (branch == 'master') {
-                        sh "docker build -t ${PROD_IMAGE}:${IMAGE_TAG} ."
-                        sh "docker push ${PROD_IMAGE}:${IMAGE_TAG}"
+                    if (composeFile && image) {
+                        echo "Using Compose File: ${composeFile}"
+                        sh "docker-compose -f ${composeFile} build"
+                        sh "docker push ${image}:${IMAGE_TAG}"
                     } else {
-                        echo "No Docker push configured for this branch"
+                        echo "No Docker Compose build configured for this branch"
                     }
                 }
             }
@@ -49,7 +48,8 @@ pipeline {
         stage('Cleanup Existing Containers') {
             steps {
                 script {
-                    def port = env.BRANCH_NAME == 'dev' ? '8081' : env.BRANCH_NAME == 'master' ? '8082' : ''
+                    def port = env.BRANCH_NAME == 'dev' ? '8081' :
+                               env.BRANCH_NAME == 'master' ? '8082' : ''
                     if (port) {
                         sh """
                             echo "Cleaning up containers running on port ${port}..."
@@ -64,13 +64,17 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
+        stage('Deploy with Docker Compose') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'dev') {
-                        sh "docker run -d -p 8081:80 ${DEV_IMAGE}:${IMAGE_TAG}"
-                    } else if (env.BRANCH_NAME == 'master') {
-                        sh "docker run -d -p 8082:80 ${PROD_IMAGE}:${IMAGE_TAG}"
+                    def composeFile = env.BRANCH_NAME == 'dev' ? 'docker-compose.dev.yml' :
+                                      env.BRANCH_NAME == 'master' ? 'docker-compose.prod.yml' : null
+
+                    if (composeFile) {
+                        sh "docker-compose -f ${composeFile} up -d"
+                        sh "docker ps"
+                    } else {
+                        echo "No Compose file found for branch"
                     }
                 }
             }

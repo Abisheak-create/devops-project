@@ -1,0 +1,8 @@
+version: '3'
+services:
+  react-app:
+    image: abisheak469/dev:${BUILD_NUMBER}
+    build:
+      context: .
+    ports:
+      - "8081:80"
