@@ -1,5 +1,5 @@
 #Development Stage
-FROM nginx:alpine
+FROM nginx
 
 COPY ./build /usr/share/nginx/html
 
