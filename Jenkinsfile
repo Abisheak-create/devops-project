@@ -71,8 +71,14 @@ pipeline {
                                       env.BRANCH_NAME == 'master' ? 'docker-compose.prod.yml' : null
 
                     if (composeFile) {
-                        sh "docker-compose -f ${composeFile} up -d"
-                        sh "docker ps"
+                        sh """
+                            echo "Tearing down previous deployment to remove broken state..."
+                            docker-compose -f ${composeFile} down --volumes --remove-orphans || true
+                            docker system prune -f || true
+                            echo "Deploying fresh containers..."
+                            docker-compose -f ${composeFile} up -d --build
+                            docker ps
+                        """
                     } else {
                         echo "No Compose file found for branch"
                     }
