@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-IMAGE_TAG=${BUILD_NUMBER:-latest}
+IMAGE_TAG=${BUILD_NUMBER}
 DEV_IMAGE="abisheak469/dev"
 PROD_IMAGE="abisheak469/prod"
 
