@@ -5,8 +5,6 @@ pipeline {
         DEV_IMAGE = 'abisheak469/dev'
         PROD_IMAGE = 'abisheak469/prod'
         IMAGE_TAG = "${BUILD_NUMBER}"
-        DOCKER_USER = credentials('docker-hub-credentials').username
-        DOCKER_PASS = credentials('docker-hub-credentials').password
     }
 
     stages {
@@ -20,30 +18,49 @@ pipeline {
             }
         }
 
+        stage('Docker Login') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    }
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    echo "Running build.sh..."
-                    chmod +x build.sh
-                    ./build.sh
-                '''
+                script {
+                    sh './build.sh'
+                }
             }
         }
 
-        stage('Deploy Application') {
+        stage('Cleanup Existing Containers') {
             steps {
-                sh '''
-                    echo "Running deploy.sh..."
-                    chmod +x deploy.sh
-                    ./deploy.sh
-                '''
+                script {
+                    def port = env.BRANCH_NAME == 'dev' ? '8081' :
+                               env.BRANCH_NAME == 'master' ? '8082' : ''
+                    if (port) {
+                        sh """
+                            echo "Cleaning up containers running on port ${port}..."
+                            CONTAINER_ID=\$(docker ps -q --filter "publish=${port}")
+                            if [ ! -z "\$CONTAINER_ID" ]; then
+                                docker stop \$CONTAINER_ID
+                                docker rm \$CONTAINER_ID
+                            fi
+                        """
+                    }
+                }
             }
         }
-    }
 
-    post {
-        always {
-            echo "Pipeline finished"
+        stage('Deploy') {
+            steps {
+                script {
+                    sh './deploy.sh'
+                }
+            }
         }
     }
 }
