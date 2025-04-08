@@ -1,0 +1,5 @@
+# Env & secrets
+.env
+
+# IDEs and editors
+.vscode/
